@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>출석 체크 시스템 - 시작</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+            background: white;
+            border-radius: 20px;
+            padding: 60px 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .title {
+            font-size: 48px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 40px;
+            letter-spacing: 2px;
+        }
+
+        .illustration {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 100px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .illustration::before {
+            content: "🚀";
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .buttons-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 30px 20px;
+            font-size: 24px;
+            font-weight: bold;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 150px;
+        }
+
+        .btn-student {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-student:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-manager {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 10px 30px rgba(245, 87, 108, 0.3);
+        }
+
+        .btn-manager:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-icon {
+            font-size: 50px;
+            margin-bottom: 10px;
+        }
+
+        .btn-text {
+            font-size: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .title {
+                font-size: 32px;
+            }
+
+            .buttons-wrapper {
+                grid-template-columns: 1fr;
+            }
+
+            .btn {
+                min-height: 120px;
+                padding: 20px;
+            }
+
+            .btn-text {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">출석 체크 시스템</h1>
+        
+        <div class="illustration"></div>
+
+        <div class="buttons-wrapper">
+            <button class="btn btn-student" onclick="goToStudentMode()">
+                <div class="btn-icon">📝</div>
+                <div class="btn-text">학생용</div>
+            </button>
+            <button class="btn btn-manager" onclick="goToManagerMode()">
+                <div class="btn-icon">🔐</div>
+                <div class="btn-text">관리자용</div>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function goToStudentMode() {
+            window.location.href = 'student-mode.html';
+        }
+
+        function goToManagerMode() {
+            window.location.href = 'manager-password.html';
+        }
+    </script>
+</body>
+</html>
