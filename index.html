@@ -3,8 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>출석 체크 시스템 - 시작</title>
+    <title>출석 체크 시스템 - 통합 버전</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            --glass-bg: rgba(255, 255, 255, 0.95);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,7 +21,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary-gradient);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -21,148 +29,419 @@
             padding: 20px;
         }
 
+        .view-section {
+            display: none;
+            width: 100%;
+            max-width: 800px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
         .container {
-            text-align: center;
             background: white;
             border-radius: 20px;
-            padding: 60px 40px;
+            padding: 40px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 800px;
             width: 100%;
+            text-align: center;
         }
 
-        .title {
-            font-size: 48px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 40px;
-            letter-spacing: 2px;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .illustration {
-            width: 200px;
-            height: 200px;
-            margin: 0 auto 40px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 100px;
-            position: relative;
-            overflow: hidden;
+        /* Home View Styles */
+        .home-title { font-size: 48px; color: #333; margin-bottom: 40px; }
+        .illustration { 
+            width: 150px; height: 150px; margin: 0 auto 40px; 
+            background: var(--primary-gradient); border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 80px;
         }
-
-        .illustration::before {
-            content: "🚀";
-            animation: float 3s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
-        }
-
-        .buttons-wrapper {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-
+        .buttons-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .btn {
-            padding: 30px 20px;
-            font-size: 24px;
-            font-weight: bold;
-            border: none;
-            border-radius: 15px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            color: white;
-            text-decoration: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 150px;
+            padding: 20px; font-size: 20px; font-weight: bold; border: none;
+            border-radius: 15px; cursor: pointer; transition: all 0.3s;
+            color: white; text-decoration: none; display: flex;
+            flex-direction: column; align-items: center; justify-content: center;
+            min-height: 120px;
         }
+        .btn-student { background: var(--primary-gradient); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); }
+        .btn-manager { background: var(--secondary-gradient); box-shadow: 0 10px 20px rgba(245, 87, 108, 0.3); }
+        .btn:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.2); }
 
-        .btn-student {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        /* Student View Styles */
+        .form-group { margin-bottom: 20px; text-align: left; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 8px; }
+        .form-group select, .form-group input { 
+            width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 10px; font-size: 16px;
         }
-
-        .btn-student:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+        .submit-btn { 
+            width: 100%; padding: 15px; border: none; border-radius: 10px; 
+            font-size: 18px; font-weight: bold; background: #ccc; color: white; cursor: not-allowed;
         }
+        .submit-btn.ready { background: var(--primary-gradient); cursor: pointer; }
 
-        .btn-manager {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            box-shadow: 0 10px 30px rgba(245, 87, 108, 0.3);
-        }
+        /* Manager Mode Styles */
+        .admin-container { max-width: 1200px; padding: 20px; background: white; border-radius: 20px; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .section { background: #f8f9fa; padding: 20px; border-radius: 15px; border-top: 5px solid #764ba2; text-align: left; }
+        .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333; }
+        .full-width { grid-column: 1 / -1; }
+        
+        .attendance-list { max-height: 300px; overflow-y: auto; }
+        .attendance-item { background: white; padding: 10px; margin-bottom: 8px; border-radius: 8px; border-left: 4px solid #f5576c; font-size: 13px; }
+        
+        .editable-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+        .list-item { display: flex; gap: 5px; }
+        .btn-delete { background: #ff4757; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        .btn-add { width: 100%; padding: 10px; background: #2f3542; color: white; border: none; border-radius: 8px; cursor: pointer; }
 
-        .btn-manager:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(245, 87, 108, 0.4);
-        }
+        .chart-container { height: 300px; position: relative; }
+        .student-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+        .tab-btn { padding: 8px 15px; border: 1px solid #ddd; background: white; border-radius: 20px; cursor: pointer; }
+        .tab-btn.active { background: var(--secondary-gradient); color: white; border-color: transparent; }
 
-        .btn-icon {
-            font-size: 50px;
-            margin-bottom: 10px;
-        }
-
-        .btn-text {
-            font-size: 20px;
-        }
-
-        @media (max-width: 600px) {
-            .title {
-                font-size: 32px;
-            }
-
-            .buttons-wrapper {
-                grid-template-columns: 1fr;
-            }
-
-            .btn {
-                min-height: 120px;
-                padding: 20px;
-            }
-
-            .btn-text {
-                font-size: 18px;
-            }
+        @media (max-width: 768px) {
+            .grid-layout { grid-template-columns: 1fr; }
+            .home-title { font-size: 32px; }
+            .buttons-wrapper { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="title">출석 체크 시스템</h1>
-        
-        <div class="illustration"></div>
 
-        <div class="buttons-wrapper">
-            <button class="btn btn-student" onclick="goToStudentMode()">
-                <div class="btn-icon">📝</div>
-                <div class="btn-text">학생용</div>
-            </button>
-            <button class="btn btn-manager" onclick="goToManagerMode()">
-                <div class="btn-icon">🔐</div>
-                <div class="btn-text">관리자용</div>
-            </button>
+    <!-- 1. Home View -->
+    <section id="view-home" class="view-section active">
+        <div class="container">
+            <h1 class="home-title">출석 체크 시스템</h1>
+            <div class="illustration">🚀</div>
+            <div class="buttons-wrapper">
+                <button class="btn btn-student" onclick="switchView('view-student')">
+                    <span>📝</span>
+                    <span>학생용</span>
+                </button>
+                <button class="btn btn-manager" onclick="switchView('view-password')">
+                    <span>🔐</span>
+                    <span>관리자용</span>
+                </button>
+            </div>
         </div>
-    </div>
+    </section>
+
+    <!-- 2. Student Form View -->
+    <section id="view-student" class="view-section">
+        <div class="container">
+            <h2 style="margin-bottom: 20px;">출석체크 (학생)</h2>
+            <form id="attendanceForm">
+                <div class="form-group">
+                    <label>학번</label>
+                    <select id="studentId" required onchange="validateStudentForm()">
+                        <option value="">-- 학번 선택 --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>이름</label>
+                    <select id="studentName" required onchange="validateStudentForm()">
+                        <option value="">-- 이름 선택 --</option>
+                    </select>
+                </div>
+                <button type="submit" id="studentSubmitBtn" class="submit-btn">출석 확인</button>
+                <button type="button" onclick="switchView('view-home')" style="background:none; border:none; color:#666; margin-top:15px; cursor:pointer;">처음으로</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- 3. Student Finish View -->
+    <section id="view-finish" class="view-section">
+        <div class="container">
+            <div id="finish-icon" style="font-size: 80px; margin-bottom: 20px;">✅</div>
+            <h2 id="finish-title">출석이 완료되었습니다!</h2>
+            <p id="finish-msg" style="margin: 20px 0; color: #666;"></p>
+            <button class="btn btn-student" onclick="switchView('view-home')" style="width:100%">홈으로 이동</button>
+        </div>
+    </section>
+
+    <!-- 4. Manager Password View -->
+    <section id="view-password" class="view-section">
+        <div class="container" style="max-width: 400px;">
+            <h2 style="margin-bottom: 20px;">관리자 인증</h2>
+            <div class="form-group">
+                <input type="password" id="adminPassword" placeholder="비밀번호를 입력하세요">
+            </div>
+            <div id="passwordError" style="color:red; font-size:14px; margin-bottom:10px; display:none;">비밀번호가 틀렸습니다.</div>
+            <button class="btn btn-manager" onclick="checkPassword()" style="width:100%">확인</button>
+            <button type="button" onclick="switchView('view-home')" style="background:none; border:none; color:#666; margin-top:15px; cursor:pointer;">뒤로가기</button>
+        </div>
+    </section>
+
+    <!-- 5. Manager Dashboard View -->
+    <section id="view-admin" class="view-section" style="max-width: 1200px;">
+        <div class="admin-container">
+            <div class="admin-header">
+                <h2>📊 관리자 대시보드</h2>
+                <button onclick="switchView('view-home')" style="padding: 10px 20px; border-radius: 8px; border:none; background:#f5576c; color:white; cursor:pointer;">로그아웃</button>
+            </div>
+
+            <div class="grid-layout">
+                <!-- Records List -->
+                <div class="section">
+                    <div class="section-title">📋 출석 기록</div>
+                    <div class="attendance-list" id="adminAttendanceList">
+                        <p style="text-align:center; color:#999;">기록이 없습니다.</p>
+                    </div>
+                    <button onclick="clearRecords()" style="margin-top:10px; width:100%; padding:8px; background:#eee; border:none; cursor:pointer; border-radius:5px;">기록 전체 삭제</button>
+                </div>
+
+                <!-- Student Management -->
+                <div class="section">
+                    <div class="section-title">👥 학생 관리 (ID/이름 쌍)</div>
+                    <div class="editable-list" id="adminStudentList"></div>
+                    <button class="btn-add" onclick="addNewStudent()">+ 학생 추가</button>
+                    <button onclick="saveStudentConfig()" style="margin-top:10px; width:100%; padding:10px; background:#667eea; color:white; border:none; border-radius:8px; cursor:pointer;">설정 저장</button>
+                </div>
+
+                <!-- Chart Section -->
+                <div class="section full-width">
+                    <div class="section-title">📈 학생별 월별 출석 현황</div>
+                    <div class="student-tabs" id="chartTabs"></div>
+                    <div class="chart-container">
+                        <canvas id="attendanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <script>
-        function goToStudentMode() {
-            window.location.href = 'student-mode.html';
+        const ADMIN_PASS = '9872451';
+        let currentChart = null;
+
+        // --- Data Management ---
+        const getStudentData = () => JSON.parse(localStorage.getItem('studentData')) || [
+            { id: '10503', name: '김건욱' }, { id: '10702', name: '김주영' },
+            { id: '10708', name: '서이준' }, { id: '10716', name: '이재하' },
+            { id: '10723', name: '차지호' }, { id: '20210', name: '민하율' },
+            { id: '20221', name: '이준서' }, { id: '20225', name: '조승연' },
+            { id: '20326', name: '최민준' }, { id: '20405', name: '강서준' },
+            { id: '20422', name: '이예준' }, { id: '20619', name: '이윤건' },
+            { id: '20717', name: '이건우' }, { id: '20720', name: '이재욱' },
+            { id: '20801', name: '강도윤' }, { id: '30204', name: '김량렬' },
+            { id: '30425', name: '정진원' }, { id: '30514', name: '손나빈' },
+            { id: '30706', name: '김영헌' }, { id: '30720', name: '장시현' }
+        ];
+
+        const getRecords = () => JSON.parse(localStorage.getItem('attendanceRecords')) || [];
+
+        // --- View Switching ---
+        function switchView(viewId) {
+            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            
+            if (viewId === 'view-student') initStudentForm();
+            if (viewId === 'view-admin') initAdminDashboard();
+            if (viewId === 'view-home') {
+                document.getElementById('adminPassword').value = '';
+                document.getElementById('passwordError').style.display = 'none';
+            }
         }
 
-        function goToManagerMode() {
-            window.location.href = 'manager-password.html';
+        // --- Student Mode Logic ---
+        function initStudentForm() {
+            const students = getStudentData();
+            const idSel = document.getElementById('studentId');
+            const nameSel = document.getElementById('studentName');
+
+            idSel.innerHTML = '<option value="">-- 학번 선택 --</option>';
+            nameSel.innerHTML = '<option value="">-- 이름 선택 --</option>';
+
+            const ids = [...new Set(students.map(s => s.id))].sort();
+            const names = [...new Set(students.map(s => s.name))].sort();
+
+            ids.forEach(id => idSel.add(new Option(id, id)));
+            names.forEach(name => nameSel.add(new Option(name, name)));
+            validateStudentForm();
         }
+
+        function validateStudentForm() {
+            const btn = document.getElementById('studentSubmitBtn');
+            const ready = document.getElementById('studentId').value && document.getElementById('studentName').value;
+            btn.classList.toggle('ready', !!ready);
+            btn.disabled = !ready;
+        }
+
+        document.getElementById('attendanceForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('studentId').value;
+            const name = document.getElementById('studentName').value;
+            const records = getRecords();
+            const today = new Date().toISOString().split('T')[0];
+
+            const isDup = records.some(r => r.id === id && r.name === name && r.date === today);
+            
+            if (isDup) {
+                document.getElementById('finish-icon').innerText = '⚠️';
+                document.getElementById('finish-title').innerText = '이미 출석했습니다!';
+                document.getElementById('finish-msg').innerText = `${name} (${id})님은 이미 오늘 출석을 완료하셨습니다.`;
+            } else {
+                const now = new Date();
+                records.unshift({
+                    id, name, date: today,
+                    time: now.toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit' })
+                });
+                localStorage.setItem('attendanceRecords', JSON.stringify(records));
+                document.getElementById('finish-icon').innerText = '✅';
+                document.getElementById('finish-title').innerText = '출석 완료!';
+                document.getElementById('finish-msg').innerText = `${name} (${id})님, 좋은 하루 되세요!`;
+            }
+            switchView('view-finish');
+        });
+
+        // --- Manager Security ---
+        function checkPassword() {
+            const pass = document.getElementById('adminPassword').value;
+            if (pass === ADMIN_PASS) switchView('view-admin');
+            else document.getElementById('passwordError').style.display = 'block';
+        }
+
+        // --- Admin Logic ---
+        function initAdminDashboard() {
+            renderAttendanceList();
+            renderStudentConfig();
+            renderChartTabs();
+        }
+
+        function renderAttendanceList() {
+            const list = document.getElementById('adminAttendanceList');
+            const records = getRecords();
+            if (records.length === 0) {
+                list.innerHTML = '<p style="text-align:center; color:#999;">기록이 없습니다.</p>';
+                return;
+            }
+            list.innerHTML = records.map(r => `
+                <div class="attendance-item">
+                    <strong>${r.date} ${r.time}</strong><br>
+                    ${r.name} (${r.id})
+                </div>
+            `).join('');
+        }
+
+        function renderStudentConfig() {
+            const container = document.getElementById('adminStudentList');
+            const students = getStudentData();
+            container.innerHTML = students.map((s, idx) => `
+                <div class="list-item">
+                    <input type="text" value="${s.id}" placeholder="학번" class="st-id">
+                    <input type="text" value="${s.name}" placeholder="이름" class="st-name">
+                    <button class="btn-delete" onclick="this.parentElement.remove()">삭제</button>
+                </div>
+            `).join('');
+        }
+
+        function addNewStudent() {
+            const container = document.getElementById('adminStudentList');
+            const div = document.createElement('div');
+            div.className = 'list-item';
+            div.innerHTML = `
+                <input type="text" placeholder="학번" class="st-id">
+                <input type="text" placeholder="이름" class="st-name">
+                <button class="btn-delete" onclick="this.parentElement.remove()">삭제</button>
+            `;
+            container.appendChild(div);
+        }
+
+        function saveStudentConfig() {
+            const students = [];
+            document.querySelectorAll('.list-item').forEach(item => {
+                const id = item.querySelector('.st-id').value.trim();
+                const name = item.querySelector('.st-name').value.trim();
+                if (id && name) students.push({ id, name });
+            });
+            localStorage.setItem('studentData', JSON.stringify(students));
+            alert('저장되었습니다.');
+            renderChartTabs();
+        }
+
+        function clearRecords() {
+            if (confirm('모든 출석 기록을 삭제하시겠습니까?')) {
+                localStorage.removeItem('attendanceRecords');
+                renderAttendanceList();
+                renderChartTabs();
+            }
+        }
+
+        function renderChartTabs() {
+            const tabs = document.getElementById('chartTabs');
+            const students = getStudentData();
+            const names = [...new Set(students.map(s => s.name))].sort();
+            
+            tabs.innerHTML = names.map(name => `
+                <button class="tab-btn" onclick="updateChart('${name}', this)">${name}</button>
+            `).join('');
+
+            if (names.length > 0) {
+                updateChart(names[0], tabs.firstChild);
+            }
+        }
+
+        function updateChart(studentName, btnElem) {
+            // Update Tab UI
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if (btnElem) btnElem.classList.add('active');
+
+            const records = getRecords();
+            const monthlyCounts = Array(12).fill(0);
+
+            records.forEach(r => {
+                if (r.name === studentName) {
+                    const parts = r.date.split('-');
+                    if (parts.length >= 2) {
+                        const month = parseInt(parts[1], 10); // 1 to 12
+                        if (month >= 1 && month <= 12) {
+                            monthlyCounts[month - 1]++;
+                        }
+                    }
+                }
+            });
+
+            const ctx = document.getElementById('attendanceChart').getContext('2d');
+            if (currentChart) currentChart.destroy();
+
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'],
+                    datasets: [{
+                        label: `${studentName} 출석 횟수`,
+                        data: monthlyCounts,
+                        borderColor: '#f5576c',
+                        backgroundColor: 'rgba(245, 87, 108, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        }
+
+        // Initialize App
+        window.onload = () => {
+            if (!localStorage.getItem('studentData')) {
+                localStorage.setItem('studentData', JSON.stringify(getStudentData()));
+            }
+        };
     </script>
 </body>
 </html>
