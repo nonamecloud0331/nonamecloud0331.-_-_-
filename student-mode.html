@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="출석 체크 - 학생용 시스템">
     <title>출석 체크 - 학생용</title>
     <style>
         * {
@@ -82,6 +83,7 @@
         .form-group select:focus {
             outline: none;
             border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         .form-group select:disabled {
@@ -95,6 +97,10 @@
             margin-top: 15px;
             text-align: center;
             display: none;
+            padding: 10px;
+            background-color: #ffebee;
+            border-radius: 8px;
+            border-left: 4px solid #d32f2f;
         }
 
         .error-message.show {
@@ -125,8 +131,28 @@
             box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
         }
 
+        .submit-btn:focus {
+            outline: 3px solid rgba(102, 126, 234, 0.5);
+            outline-offset: 2px;
+        }
+
         .submit-btn:disabled {
             cursor: not-allowed;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover,
+        .back-link:focus {
+            color: #764ba2;
+            text-decoration: underline;
         }
 
         @media (max-width: 600px) {
@@ -156,89 +182,79 @@
 
         <form id="attendanceForm">
             <div class="form-group">
-                <label for="studentId">학번</label>
-                <select id="studentId" required>
-                    <option value="">-- 학번 선택 --</option>
+                <label for="studentSelect">학번 및 이름</label>
+                <select id="studentSelect" required aria-label="학번 및 이름 선택">
+                    <option value="">-- 학생 선택 --</option>
                 </select>
             </div>
 
-            <div class="form-group">
-                <label for="studentName">이름</label>
-                <select id="studentName" required>
-                    <option value="">-- 이름 선택 --</option>
-                </select>
-            </div>
-
-            <div class="error-message" id="errorMessage">질문에 모두 답해주세요</div>
+            <div class="error-message" id="errorMessage" role="alert"></div>
 
             <button type="submit" class="submit-btn" id="submitBtn" disabled>출석 확인</button>
         </form>
+
+        <a href="index.html" class="back-link">← 뒤로가기</a>
     </div>
 
     <script>
-        // 로컬스토리지에서 학생 정보 로드
-        function loadStudentData() {
-            const idSelect = document.getElementById('studentId');
-            const nameSelect = document.getElementById('studentName');
+        // 학생 정보 (학번과 이름을 통합)
+        const studentData = [
+            { id: '10503', name: '김건욱' },
+            { id: '10702', name: '김주영' },
+            { id: '10708', name: '서이준' },
+            { id: '10716', name: '이재하' },
+            { id: '10723', name: '차지호' },
+            { id: '20210', name: '민하율' },
+            { id: '20221', name: '이준서' },
+            { id: '20225', name: '조승연' },
+            { id: '20326', name: '최민준' },
+            { id: '20405', name: '강서준' },
+            { id: '20422', name: '이예준' },
+            { id: '20619', name: '이윤건' },
+            { id: '20717', name: '이건우' },
+            { id: '20720', name: '이재욱' },
+            { id: '20801', name: '강도윤' },
+            { id: '30204', name: '김량렬' },
+            { id: '30425', name: '정진원' },
+            { id: '30514', name: '손나빈' },
+            { id: '30706', name: '김영헌' },
+            { id: '30720', name: '장시현' }
+        ];
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', function() {
+            loadStudentOptions();
+        });
+
+        // 학생 옵션 로드
+        function loadStudentOptions() {
+            const studentSelect = document.getElementById('studentSelect');
             
-            let studentData = localStorage.getItem('studentData');
-            if (!studentData) {
-                // 초기 데이터 설정
-                studentData = JSON.stringify([
-                    { id: '10503', name: '김건욱' },
-                    { id: '10702', name: '김주영' },
-                    { id: '10708', name: '서이준' },
-                    { id: '10716', name: '이재하' },
-                    { id: '10723', name: '차지호' },
-                    { id: '20210', name: '민하율' },
-                    { id: '20221', name: '이준서' },
-                    { id: '20225', name: '조승연' },
-                    { id: '20326', name: '최민준' },
-                    { id: '20405', name: '강서준' },
-                    { id: '20422', name: '이예준' },
-                    { id: '20619', name: '이윤건' },
-                    { id: '20717', name: '이건우' },
-                    { id: '20720', name: '이재욱' },
-                    { id: '20801', name: '강도윤' },
-                    { id: '30204', name: '김량렬' },
-                    { id: '30425', name: '정진원' },
-                    { id: '30514', name: '손나빈' },
-                    { id: '30706', name: '김영헌' },
-                    { id: '30720', name: '장시현' }
-                ]);
-                localStorage.setItem('studentData', studentData);
-            }
-
-            const students = JSON.parse(studentData);
-            const ids = [...new Set(students.map(s => s.id))];
-            const names = [...new Set(students.map(s => s.name))];
-
-            ids.forEach(id => {
-                const option = document.createElement('option');
-                option.value = id;
-                option.textContent = id;
-                idSelect.appendChild(option);
+            // 학생 데이터를 "학번 이름" 형식으로 정렬
+            const sortedStudents = studentData.slice().sort((a, b) => {
+                return a.id.localeCompare(b.id);
             });
 
-            names.forEach(name => {
+            sortedStudents.forEach(student => {
                 const option = document.createElement('option');
-                option.value = name;
-                option.textContent = name;
-                nameSelect.appendChild(option);
+                option.value = JSON.stringify({ id: student.id, name: student.name });
+                option.textContent = `${student.id} ${student.name}`;
+                studentSelect.appendChild(option);
             });
         }
 
         // 선택 항목 검증
         function validateForm() {
-            const idValue = document.getElementById('studentId').value;
-            const nameValue = document.getElementById('studentName').value;
+            const studentSelect = document.getElementById('studentSelect');
             const submitBtn = document.getElementById('submitBtn');
             const errorMessage = document.getElementById('errorMessage');
 
-            if (idValue && nameValue) {
+            errorMessage.classList.remove('show');
+            errorMessage.textContent = '';
+
+            if (studentSelect.value) {
                 submitBtn.classList.add('active');
                 submitBtn.disabled = false;
-                errorMessage.classList.remove('show');
             } else {
                 submitBtn.classList.remove('active');
                 submitBtn.disabled = true;
@@ -249,34 +265,42 @@
         document.getElementById('attendanceForm').addEventListener('submit', function(e) {
             e.preventDefault();
 
-            const idValue = document.getElementById('studentId').value;
-            const nameValue = document.getElementById('studentName').value;
+            const studentSelect = document.getElementById('studentSelect');
             const errorMessage = document.getElementById('errorMessage');
 
-            if (!idValue || !nameValue) {
+            if (!studentSelect.value) {
+                errorMessage.textContent = '학생을 선택해주세요.';
                 errorMessage.classList.add('show');
                 return;
             }
 
-            // 중복 확인
+            const student = JSON.parse(studentSelect.value);
+            const idValue = student.id;
+            const nameValue = student.name;
+
+            // 오늘 날짜 확인
+            const today = new Date().toISOString().split('T')[0];
+            
+            // 출석 기록 확인
             let attendanceRecords = localStorage.getItem('attendanceRecords');
             const records = attendanceRecords ? JSON.parse(attendanceRecords) : [];
             
-            const today = new Date().toISOString().split('T')[0];
+            // 오늘 같은 학번으로 이미 출석했는지 확인
             const isDuplicate = records.some(record => 
                 record.id === idValue && 
-                record.name === nameValue && 
                 record.date === today
             );
 
             if (isDuplicate) {
-                // 완료 페이지로 이동 (중복)
+                // 중복 출석 - 기록 추가 안 함
                 sessionStorage.setItem('isDuplicate', 'true');
+                sessionStorage.setItem('studentId', idValue);
+                sessionStorage.setItem('studentName', nameValue);
                 window.location.href = 'student-finish.html';
                 return;
             }
 
-            // 새 기록 추가
+            // 새 출석 기록 추가
             const now = new Date();
             const record = {
                 date: today,
@@ -291,15 +315,13 @@
 
             // 완료 페이지로 이동
             sessionStorage.setItem('isDuplicate', 'false');
+            sessionStorage.setItem('studentId', idValue);
+            sessionStorage.setItem('studentName', nameValue);
             window.location.href = 'student-finish.html';
         });
 
         // 선택 변화 감지
-        document.getElementById('studentId').addEventListener('change', validateForm);
-        document.getElementById('studentName').addEventListener('change', validateForm);
-
-        // 페이지 로드 시 데이터 불러오기
-        window.addEventListener('load', loadStudentData);
+        document.getElementById('studentSelect').addEventListener('change', validateForm);
     </script>
 </body>
 </html>
