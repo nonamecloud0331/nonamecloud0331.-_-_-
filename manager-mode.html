@@ -400,7 +400,7 @@
                 { id: '30706', name: '김영헌' },
                 { id: '30720', name: '장시현' }
             ];
-            
+
             // 이름 리스트
             const nameList = document.getElementById('nameList');
             const names = [...new Set(studentData.map(s => s.name))].sort();
@@ -425,12 +425,12 @@
         // 학생 버튼 로드
         function loadStudentButtons() {
             const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
-            
+
             // 출석 기록에 있는 학생들만 추출
             const studentsWithAttendance = [...new Set(attendanceRecords.map(r => r.name))].sort();
-            
+
             const studentButtons = document.getElementById('studentButtons');
-            
+
             if (studentsWithAttendance.length === 0) {
                 studentButtons.innerHTML = '<p style="color: #999;">출석 기록이 없습니다</p>';
                 showChartPlaceholder();
@@ -493,7 +493,7 @@
             const chartContainer = document.querySelector('.chart-container');
             chartContainer.innerHTML = '<canvas id="attendanceChart"></canvas>';
             const ctx = document.getElementById('attendanceChart').getContext('2d');
-            
+
             if (chart) {
                 chart.destroy();
             }
@@ -555,7 +555,7 @@
         function deleteName(index) {
             const names = Array.from(document.querySelectorAll('#nameList input')).map(input => input.value);
             names.splice(index, 1);
-            
+
             const nameList = document.getElementById('nameList');
             nameList.innerHTML = names.map((name, idx) => `
                 <div class="list-item">
@@ -581,7 +581,7 @@
         function deleteId(index) {
             const ids = Array.from(document.querySelectorAll('#idList input')).map(input => input.value);
             ids.splice(index, 1);
-            
+
             const idList = document.getElementById('idList');
             idList.innerHTML = ids.map((id, idx) => `
                 <div class="list-item">
@@ -598,7 +598,7 @@
                 backupDate: new Date().toISOString(),
                 records: attendanceRecords
             };
-            
+
             const dataStr = JSON.stringify(backupData, null, 2);
             const dataBlob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(dataBlob);
