@@ -33,7 +33,15 @@
             margin-bottom: 10px;
         }
 
-        .logout-btn {
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .logout-btn, .backup-btn, .restore-btn {
             background: white;
             color: #f5576c;
             padding: 10px 20px;
@@ -43,10 +51,9 @@
             font-weight: bold;
             transition: all 0.3s ease;
             display: inline-block;
-            margin-top: 10px;
         }
 
-        .logout-btn:hover {
+        .logout-btn:hover, .backup-btn:hover, .restore-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
@@ -235,6 +242,22 @@
             grid-column: 1 / -1;
         }
 
+        .chart-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 350px;
+            color: #999;
+            font-size: 18px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border: 2px dashed #ddd;
+        }
+
+        #restoreFileInput {
+            display: none;
+        }
+
         @media (max-width: 1024px) {
             .main-container {
                 grid-template-columns: 1fr;
@@ -268,7 +291,12 @@
 <body>
     <div class="header">
         <div class="header-title">📊 관리자 모드</div>
-        <button class="logout-btn" onclick="logout()">로그아웃</button>
+        <div class="header-buttons">
+            <button class="backup-btn" onclick="backupData()">💾 데이터 백업</button>
+            <button class="restore-btn" onclick="document.getElementById('restoreFileInput').click()">📂 데이터 복구</button>
+            <button class="logout-btn" onclick="logout()">로그아웃</button>
+        </div>
+        <input type="file" id="restoreFileInput" accept=".json" onchange="restoreData(event)">
     </div>
 
     <div class="main-container">
@@ -401,12 +429,14 @@
             // 출석 기록에 있는 학생들만 추출
             const studentsWithAttendance = [...new Set(attendanceRecords.map(r => r.name))].sort();
             
+            const studentButtons = document.getElementById('studentButtons');
+            
             if (studentsWithAttendance.length === 0) {
-                document.getElementById('studentButtons').innerHTML = '<p style="color: #999;">출석 기록이 없습니다</p>';
+                studentButtons.innerHTML = '<p style="color: #999;">출석 기록이 없습니다</p>';
+                showChartPlaceholder();
                 return;
             }
 
-            const studentButtons = document.getElementById('studentButtons');
             studentButtons.innerHTML = studentsWithAttendance.map((name, index) => `
                 <button class="student-btn ${index === 0 ? 'active' : ''}" onclick="showStudentChart('${name}')" title="${name}">
                     ${name}
@@ -414,7 +444,19 @@
             `).join('');
 
             // 첫 번째 학생의 차트 표시
-            showStudentChart(studentsWithAttendance[0]);
+            if (studentsWithAttendance.length > 0) {
+                showStudentChart(studentsWithAttendance[0]);
+            }
+        }
+
+        // 차트 플레이스홀더 표시
+        function showChartPlaceholder() {
+            const chartContainer = document.querySelector('.chart-container');
+            chartContainer.innerHTML = '<div class="chart-placeholder">출석 기록이 없습니다. 학생들의 출석을 기록해주세요.</div>';
+            if (chart) {
+                chart.destroy();
+                chart = null;
+            }
         }
 
         // 학생별 차트 표시
@@ -448,6 +490,8 @@
             const data = allMonths.map(month => monthlyData[month] || 0);
 
             // 차트 업데이트
+            const chartContainer = document.querySelector('.chart-container');
+            chartContainer.innerHTML = '<canvas id="attendanceChart"></canvas>';
             const ctx = document.getElementById('attendanceChart').getContext('2d');
             
             if (chart) {
@@ -545,6 +589,53 @@
                     <button class="btn-delete" onclick="deleteId(${idx})">삭제</button>
                 </div>
             `).join('');
+        }
+
+        // 데이터 백업 (JSON 파일로 다운로드)
+        function backupData() {
+            const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+            const backupData = {
+                backupDate: new Date().toISOString(),
+                records: attendanceRecords
+            };
+            
+            const dataStr = JSON.stringify(backupData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `attendance-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            alert('데이터가 백업되었습니다!');
+        }
+
+        // 데이터 복구 (백업 파일에서 복구)
+        function restoreData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const backupData = JSON.parse(e.target.result);
+                    if (backupData.records && Array.isArray(backupData.records)) {
+                        localStorage.setItem('attendanceRecords', JSON.stringify(backupData.records));
+                        alert('데이터가 복구되었습니다!');
+                        location.reload();
+                    } else {
+                        alert('올바른 백업 파일이 아닙니다.');
+                    }
+                } catch (error) {
+                    alert('파일을 읽을 수 없습니다.');
+                }
+            };
+            reader.readAsText(file);
+
+            // 파일 입력 초기화
+            event.target.value = '';
         }
 
         // 로그아웃
