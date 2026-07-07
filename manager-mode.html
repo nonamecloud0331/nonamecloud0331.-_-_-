@@ -244,6 +244,80 @@
             margin-top: 20px;
         }
 
+        .student-search {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 14px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            transition: border-color 0.3s ease;
+        }
+
+        .student-search:focus {
+            outline: none;
+            border-color: #f5576c;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 6px 16px rgba(245, 87, 108, 0.25);
+        }
+
+        .stat-card.muted {
+            background: linear-gradient(135deg, #a8a8a8 0%, #7a7a7a 100%);
+        }
+
+        .stat-card-value {
+            font-size: 26px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .stat-card-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .view-toggle-btn {
+            padding: 10px 18px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .view-toggle-btn:hover {
+            border-color: #f5576c;
+        }
+
+        .view-toggle-btn.active {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-color: #f5576c;
+        }
+
         .full-width {
             grid-column: 1 / -1;
         }
@@ -465,10 +539,21 @@
             <button class="btn-add" onclick="addId()">+ 학번 추가</button>
         </div>
 
-        <!-- 월별 출석 그래프 -->
+        <!-- 개인별 출석 그래프 -->
         <div class="section full-width">
-            <div class="section-title">📈 학생별 월별 출석 현황</div>
+            <div class="section-title">📈 학생별 출석 현황</div>
+
+            <input type="text" id="studentSearch" class="student-search" placeholder="🔍 학번 또는 이름으로 검색..." oninput="filterStudentButtons()">
+
             <div class="buttons-grid" id="studentButtons"></div>
+
+            <div id="statsCards" class="stats-cards"></div>
+
+            <div class="view-toggle">
+                <button class="view-toggle-btn active" id="viewMonthlyBtn" onclick="setViewMode('monthly')">월별 보기</button>
+                <button class="view-toggle-btn" id="viewWeeklyBtn" onclick="setViewMode('weekly')">주별 보기 (최근 12주)</button>
+            </div>
+
             <div class="chart-container">
                 <canvas id="attendanceChart"></canvas>
             </div>
@@ -481,6 +566,33 @@
         const GITHUB_OWNER = 'nonamecloud0331';
         const GITHUB_REPO = 'nonamecloud0331.-_-_-';
         const DATA_FILE = 'attendance-data.json';
+
+        // 학생 정보 (전체 화면에서 공유)
+        const studentData = [
+            { id: '10503', name: '김건욱' },
+            { id: '10702', name: '김주영' },
+            { id: '10708', name: '서이준' },
+            { id: '10716', name: '이재하' },
+            { id: '10723', name: '차지호' },
+            { id: '20210', name: '민하율' },
+            { id: '20221', name: '이준서' },
+            { id: '20225', name: '조승연' },
+            { id: '20326', name: '최민준' },
+            { id: '20405', name: '강서준' },
+            { id: '20422', name: '이예준' },
+            { id: '20619', name: '이윤건' },
+            { id: '20717', name: '이건우' },
+            { id: '20720', name: '이재욱' },
+            { id: '20801', name: '강도윤' },
+            { id: '30204', name: '김량렬' },
+            { id: '30425', name: '정진원' },
+            { id: '30514', name: '손나빈' },
+            { id: '30706', name: '김영헌' },
+            { id: '30720', name: '장시현' }
+        ];
+
+        let currentStudent = null; // { id, name }
+        let viewMode = 'monthly'; // 'monthly' | 'weekly'
 
         // 페이지 로드 시 초기화
         window.addEventListener('load', function() {
@@ -679,29 +791,6 @@
 
         // 학생 리스트 로드
         function loadStudentLists() {
-            const studentData = [
-                { id: '10503', name: '김건욱' },
-                { id: '10702', name: '김주영' },
-                { id: '10708', name: '서이준' },
-                { id: '10716', name: '이재하' },
-                { id: '10723', name: '차지호' },
-                { id: '20210', name: '민하율' },
-                { id: '20221', name: '이준서' },
-                { id: '20225', name: '조승연' },
-                { id: '20326', name: '최민준' },
-                { id: '20405', name: '강서준' },
-                { id: '20422', name: '이예준' },
-                { id: '20619', name: '이윤건' },
-                { id: '20717', name: '이건우' },
-                { id: '20720', name: '이재욱' },
-                { id: '20801', name: '강도윤' },
-                { id: '30204', name: '김량렬' },
-                { id: '30425', name: '정진원' },
-                { id: '30514', name: '손나빈' },
-                { id: '30706', name: '김영헌' },
-                { id: '30720', name: '장시현' }
-            ];
-
             // 이름 리스트
             const nameList = document.getElementById('nameList');
             const names = [...new Set(studentData.map(s => s.name))].sort();
@@ -723,65 +812,183 @@
             `).join('');
         }
 
-        // 학생 버튼 로드
+        // 학생 버튼 로드 (등록된 전체 학생 기준, 출석 기록 유무와 무관)
         function loadStudentButtons() {
-            const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
-            const studentsWithAttendance = [...new Set(attendanceRecords.map(r => r.name))].sort();
             const studentButtons = document.getElementById('studentButtons');
+            const sortedStudents = studentData.slice().sort((a, b) => a.id.localeCompare(b.id));
 
-            if (studentsWithAttendance.length === 0) {
-                studentButtons.innerHTML = '<p style="color: #999;">출석 기록이 없습니다</p>';
+            if (sortedStudents.length === 0) {
+                studentButtons.innerHTML = '<p style="color: #999;">등록된 학생이 없습니다</p>';
                 showChartPlaceholder();
                 return;
             }
 
-            studentButtons.innerHTML = studentsWithAttendance.map((name, index) => `
-                <button class="student-btn ${index === 0 ? 'active' : ''}" onclick="showStudentChart('${name}')" title="${name}">
-                    ${name}
+            studentButtons.innerHTML = sortedStudents.map(student => `
+                <button class="student-btn" data-id="${student.id}" data-search="${student.id} ${student.name}"
+                    onclick="selectStudent('${student.id}')" title="${student.id} ${student.name}">
+                    ${student.id} ${student.name}
                 </button>
             `).join('');
 
-            if (studentsWithAttendance.length > 0) {
-                showStudentChart(studentsWithAttendance[0]);
+            selectStudent(sortedStudents[0].id);
+        }
+
+        // 검색어로 학생 버튼 필터링
+        function filterStudentButtons() {
+            const keyword = document.getElementById('studentSearch').value.trim().toLowerCase();
+            document.querySelectorAll('.student-btn').forEach(btn => {
+                const haystack = (btn.getAttribute('data-search') || '').toLowerCase();
+                btn.style.display = haystack.includes(keyword) ? '' : 'none';
+            });
+        }
+
+        // 보기 모드(월별/주별) 전환
+        function setViewMode(mode) {
+            viewMode = mode;
+            document.getElementById('viewMonthlyBtn').classList.toggle('active', mode === 'monthly');
+            document.getElementById('viewWeeklyBtn').classList.toggle('active', mode === 'weekly');
+            if (currentStudent) {
+                renderChart();
             }
+        }
+
+        // 학생 선택
+        function selectStudent(studentId) {
+            const student = studentData.find(s => s.id === studentId);
+            if (!student) return;
+            currentStudent = student;
+
+            document.querySelectorAll('.student-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-id') === studentId);
+            });
+
+            renderChart();
         }
 
         // 차트 플레이스홀더
         function showChartPlaceholder() {
             const chartContainer = document.querySelector('.chart-container');
             chartContainer.innerHTML = '<div class="chart-placeholder">출석 기록이 없습니다. 학생들의 출석을 기록해주세요.</div>';
+            document.getElementById('statsCards').innerHTML = '';
             if (chart) {
                 chart.destroy();
                 chart = null;
             }
         }
 
-        // 학생별 차트 표시
-        function showStudentChart(studentName) {
-            document.querySelectorAll('.student-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.textContent.trim() === studentName) {
-                    btn.classList.add('active');
-                }
-            });
+        // 이번 주 월요일 구하기
+        function getMondayOf(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diffToMonday = (day === 0 ? -6 : 1) - day;
+            d.setDate(d.getDate() + diffToMonday);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        }
 
+        function formatWeekLabel(monday) {
+            return `${monday.getMonth() + 1}/${monday.getDate()}`;
+        }
+
+        // 월별 데이터 계산 (학생 개인 + 전체 평균)
+        function getMonthlyChartData(studentId) {
             const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
-            const monthlyData = {};
+            const allMonths = [];
+            for (let i = 1; i <= 12; i++) allMonths.push(`${i}월`);
+
+            const studentMonthly = {};
+            const totalMonthly = {};
 
             attendanceRecords.forEach(record => {
-                if (record.name === studentName) {
-                    const [year, month] = record.date.split('-');
-                    const monthKey = `${month}월`;
-                    monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
+                const [, month] = record.date.split('-');
+                const monthKey = `${parseInt(month, 10)}월`;
+                totalMonthly[monthKey] = (totalMonthly[monthKey] || 0) + 1;
+                if (record.id === studentId) {
+                    studentMonthly[monthKey] = (studentMonthly[monthKey] || 0) + 1;
                 }
             });
 
-            const allMonths = [];
-            for (let i = 1; i <= 12; i++) {
-                allMonths.push(`${i}월`);
+            const totalStudents = studentData.length || 1;
+            const studentSeries = allMonths.map(m => studentMonthly[m] || 0);
+            const avgSeries = allMonths.map(m => +((totalMonthly[m] || 0) / totalStudents).toFixed(2));
+
+            return { labels: allMonths, studentSeries, avgSeries };
+        }
+
+        // 주별 데이터 계산 (최근 12주, 학생 개인 + 전체 평균)
+        function getWeeklyChartData(studentId, weekCount = 12) {
+            const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+            const currentMonday = getMondayOf(new Date());
+
+            const weeks = [];
+            for (let i = weekCount - 1; i >= 0; i--) {
+                const monday = new Date(currentMonday);
+                monday.setDate(currentMonday.getDate() - i * 7);
+                weeks.push(monday);
             }
 
-            const data = allMonths.map(month => monthlyData[month] || 0);
+            const studentWeekly = {};
+            const totalWeekly = {};
+
+            attendanceRecords.forEach(record => {
+                const key = getMondayOf(record.date).getTime();
+                totalWeekly[key] = (totalWeekly[key] || 0) + 1;
+                if (record.id === studentId) {
+                    studentWeekly[key] = (studentWeekly[key] || 0) + 1;
+                }
+            });
+
+            const totalStudents = studentData.length || 1;
+            const labels = weeks.map(formatWeekLabel);
+            const studentSeries = weeks.map(w => studentWeekly[w.getTime()] || 0);
+            const avgSeries = weeks.map(w => +((totalWeekly[w.getTime()] || 0) / totalStudents).toFixed(2));
+
+            return { labels, studentSeries, avgSeries };
+        }
+
+        // 요약 통계 카드 렌더링
+        function renderStatsCards(studentId) {
+            const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+            const studentRecords = attendanceRecords.filter(r => r.id === studentId);
+            const totalClassDays = new Set(attendanceRecords.map(r => r.date)).size;
+            const attendedDays = new Set(studentRecords.map(r => r.date)).size;
+            const absentDays = Math.max(totalClassDays - attendedDays, 0);
+            const rate = totalClassDays > 0 ? Math.round((attendedDays / totalClassDays) * 100) : null;
+
+            let lastDateLabel = '기록 없음';
+            if (studentRecords.length > 0) {
+                const lastDate = studentRecords.map(r => r.date).sort().pop();
+                const daysAgo = Math.round((new Date().setHours(0,0,0,0) - new Date(lastDate).setHours(0,0,0,0)) / 86400000);
+                lastDateLabel = daysAgo === 0 ? `${lastDate} (오늘)` : `${lastDate} (${daysAgo}일 전)`;
+            }
+
+            const cards = [
+                { value: attendedDays, label: '총 출석 횟수', muted: false },
+                { value: absentDays, label: '결석 횟수 (진행된 수업 기준)', muted: true },
+                { value: rate === null ? '-' : `${rate}%`, label: '출석률', muted: false },
+                { value: lastDateLabel, label: '최근 출석일', muted: true }
+            ];
+
+            document.getElementById('statsCards').innerHTML = cards.map(c => `
+                <div class="stat-card ${c.muted ? 'muted' : ''}">
+                    <div class="stat-card-value">${c.value}</div>
+                    <div class="stat-card-label">${c.label}</div>
+                </div>
+            `).join('');
+        }
+
+        // 현재 선택된 학생 + 보기 모드에 따라 차트/통계 렌더링
+        function renderChart() {
+            if (!currentStudent) return;
+            const { id, name } = currentStudent;
+
+            renderStatsCards(id);
+
+            const { labels, studentSeries, avgSeries } = viewMode === 'weekly'
+                ? getWeeklyChartData(id)
+                : getMonthlyChartData(id);
+
+            const periodLabel = viewMode === 'weekly' ? '주별' : '월별';
 
             const chartContainer = document.querySelector('.chart-container');
             chartContainer.innerHTML = '<canvas id="attendanceChart"></canvas>';
@@ -791,32 +998,62 @@
                 chart.destroy();
             }
 
+            const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+            gradient.addColorStop(0, 'rgba(245, 87, 108, 0.35)');
+            gradient.addColorStop(1, 'rgba(245, 87, 108, 0.02)');
+
             chart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: allMonths,
-                    datasets: [{
-                        label: `${studentName}의 월별 출석 현황`,
-                        data: data,
-                        borderColor: '#f5576c',
-                        backgroundColor: 'rgba(245, 87, 108, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 6,
-                        pointBackgroundColor: '#f5576c',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2,
-                        pointHoverRadius: 8
-                    }]
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: `${name}의 ${periodLabel} 출석 횟수`,
+                            data: studentSeries,
+                            borderColor: '#f5576c',
+                            backgroundColor: gradient,
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.35,
+                            pointRadius: 5,
+                            pointBackgroundColor: '#f5576c',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointHoverRadius: 7
+                        },
+                        {
+                            label: '전체 학생 평균',
+                            data: avgSeries,
+                            borderColor: '#999',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            fill: false,
+                            tension: 0.35,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#999',
+                            pointHoverRadius: 5
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
                     plugins: {
                         legend: {
                             labels: {
-                                font: { size: 14, weight: 'bold' }
+                                font: { size: 13, weight: 'bold' }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y}회`;
+                                }
                             }
                         }
                     },
