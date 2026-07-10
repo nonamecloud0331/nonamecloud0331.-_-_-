@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="출석 체크 - 학생용 시스템">
     <title>출석 체크 - 학생용</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -197,29 +198,21 @@
     </div>
 
     <script>
-        // 학생 정보 (학번과 이름을 통합)
-        const studentData = [
-            { id: '10503', name: '김건욱' },
-            { id: '10702', name: '김주영' },
-            { id: '10708', name: '서이준' },
-            { id: '10716', name: '이재하' },
-            { id: '10723', name: '차지호' },
-            { id: '20210', name: '민하율' },
-            { id: '20221', name: '이준서' },
-            { id: '20225', name: '조승연' },
-            { id: '20326', name: '최민준' },
-            { id: '20405', name: '강서준' },
-            { id: '20422', name: '이예준' },
-            { id: '20619', name: '이윤건' },
-            { id: '20717', name: '이건우' },
-            { id: '20720', name: '이재욱' },
-            { id: '20801', name: '강도윤' },
-            { id: '30204', name: '김량렬' },
-            { id: '30425', name: '정진원' },
-            { id: '30514', name: '손나빈' },
-            { id: '30706', name: '김영헌' },
-            { id: '30720', name: '장시현' }
-        ];
+        // Supabase 연결 설정
+        const SUPABASE_URL = 'https://patxdjdibfqyucclhrde.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhdHhkamRpYmZxeXVjY2xocmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0OTM1NTgsImV4cCI6MjA5OTA2OTU1OH0.-NHStGhdXLv1KCLQLNKTExFTVZeSU5x7AlfkysPuEs0';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // 학생 명단 (Supabase students 테이블에서 불러옴)
+        let studentData = [];
+
+        // 로컬(브라우저) 기준 날짜를 YYYY-MM-DD로 반환 (toISOString은 UTC라 새벽 시간대에 날짜가 밀리는 문제가 있어 직접 계산)
+        function getLocalDateString(d = new Date()) {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
 
         // 페이지 로드 시 초기화
         window.addEventListener('load', function() {
@@ -227,20 +220,31 @@
         });
 
         // 학생 옵션 로드
-        function loadStudentOptions() {
+        async function loadStudentOptions() {
             const studentSelect = document.getElementById('studentSelect');
-            
-            // 학생 데이터를 "학번 이름" 형식으로 정렬
-            const sortedStudents = studentData.slice().sort((a, b) => {
-                return a.id.localeCompare(b.id);
-            });
+            const errorMessage = document.getElementById('errorMessage');
 
-            sortedStudents.forEach(student => {
-                const option = document.createElement('option');
-                option.value = JSON.stringify({ id: student.id, name: student.name });
-                option.textContent = `${student.id} ${student.name}`;
-                studentSelect.appendChild(option);
-            });
+            try {
+                const { data, error } = await supabaseClient
+                    .from('students')
+                    .select('*')
+                    .order('student_id', { ascending: true });
+
+                if (error) throw error;
+
+                studentData = (data || []).map(row => ({ id: row.student_id, name: row.name }));
+
+                studentData.forEach(student => {
+                    const option = document.createElement('option');
+                    option.value = JSON.stringify({ id: student.id, name: student.name });
+                    option.textContent = `${student.id} ${student.name}`;
+                    studentSelect.appendChild(option);
+                });
+            } catch (error) {
+                errorMessage.textContent = '⚠️ 학생 명단을 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해주세요.';
+                errorMessage.classList.add('show');
+                console.error('학생 명단 조회 오류:', error);
+            }
         }
 
         // 선택 항목 검증
@@ -262,11 +266,12 @@
         }
 
         // 폼 제출
-        document.getElementById('attendanceForm').addEventListener('submit', function(e) {
+        document.getElementById('attendanceForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const studentSelect = document.getElementById('studentSelect');
             const errorMessage = document.getElementById('errorMessage');
+            const submitBtn = document.getElementById('submitBtn');
 
             if (!studentSelect.value) {
                 errorMessage.textContent = '학생을 선택해주세요.';
@@ -278,46 +283,49 @@
             const idValue = student.id;
             const nameValue = student.name;
 
-            // 오늘 날짜 확인
-            const today = new Date().toISOString().split('T')[0];
-            
-            // 출석 기록 확인
-            let attendanceRecords = localStorage.getItem('attendanceRecords');
-            const records = attendanceRecords ? JSON.parse(attendanceRecords) : [];
-            
-            // 오늘 같은 학번으로 이미 출석했는지 확인
-            const isDuplicate = records.some(record => 
-                record.id === idValue && 
-                record.date === today
-            );
+            submitBtn.disabled = true;
+            submitBtn.textContent = '확인 중...';
 
-            if (isDuplicate) {
-                // 중복 출석 - 기록 추가 안 함
-                sessionStorage.setItem('isDuplicate', 'true');
+            // 오늘 날짜 확인 (주의: toISOString()은 UTC 기준이라 새벽 시간대에 날짜가 하루 밀릴 수 있어 로컬 날짜로 직접 계산)
+            const now = new Date();
+            const today = getLocalDateString(now);
+            const timeValue = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            try {
+                // Supabase에 출석 기록 추가 시도 (student_id + date가 유니크 제약이라 중복이면 에러 발생)
+                const { error } = await supabaseClient
+                    .from('attendance')
+                    .insert({
+                        student_id: idValue,
+                        name: nameValue,
+                        date: today,
+                        time: timeValue
+                    });
+
+                if (error) {
+                    if (error.code === '23505') {
+                        // 유니크 제약 위반 = 오늘 이미 출석함
+                        sessionStorage.setItem('isDuplicate', 'true');
+                        sessionStorage.setItem('studentId', idValue);
+                        sessionStorage.setItem('studentName', nameValue);
+                        window.location.href = 'student-finish.html';
+                        return;
+                    }
+                    throw error;
+                }
+
+                // 성공
+                sessionStorage.setItem('isDuplicate', 'false');
                 sessionStorage.setItem('studentId', idValue);
                 sessionStorage.setItem('studentName', nameValue);
                 window.location.href = 'student-finish.html';
-                return;
+            } catch (err) {
+                errorMessage.textContent = '⚠️ 서버 연결에 실패했습니다. 인터넷 연결을 확인하고 다시 시도해주세요.';
+                errorMessage.classList.add('show');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '출석 확인';
+                console.error('출석 기록 오류:', err);
             }
-
-            // 새 출석 기록 추가
-            const now = new Date();
-            const record = {
-                date: today,
-                time: now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-                id: idValue,
-                name: nameValue,
-                timestamp: now.getTime()
-            };
-
-            records.unshift(record); // 맨 앞에 추가
-            localStorage.setItem('attendanceRecords', JSON.stringify(records));
-
-            // 완료 페이지로 이동
-            sessionStorage.setItem('isDuplicate', 'false');
-            sessionStorage.setItem('studentId', idValue);
-            sessionStorage.setItem('studentName', nameValue);
-            window.location.href = 'student-finish.html';
         });
 
         // 선택 변화 감지
