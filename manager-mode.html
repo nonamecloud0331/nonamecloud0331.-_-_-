@@ -42,7 +42,7 @@
             flex-wrap: wrap;
         }
 
-        .logout-btn, .backup-btn, .restore-btn, .sync-btn, .settings-btn {
+        .logout-btn, .backup-btn, .restore-btn, .sync-btn {
             background: white;
             color: #f5576c;
             padding: 10px 20px;
@@ -55,7 +55,7 @@
             font-size: 14px;
         }
 
-        .logout-btn:hover, .backup-btn:hover, .restore-btn:hover, .sync-btn:hover, .settings-btn:hover {
+        .logout-btn:hover, .backup-btn:hover, .restore-btn:hover, .sync-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
@@ -525,8 +525,7 @@
                 const { data, error } = await supabaseClient
                     .from('attendance')
                     .select('*')
-                    .order('date', { ascending: false })
-                    .order('time', { ascending: false });
+                    .order('created_at', { ascending: false });
 
                 if (error) throw error;
 
