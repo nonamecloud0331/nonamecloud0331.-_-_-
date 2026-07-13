@@ -420,6 +420,7 @@
             <button class="restore-btn" onclick="document.getElementById('restoreFileInput').click()">📂 로컬 복구</button>
             <button class="sync-btn" id="refreshBtn" onclick="fetchAttendanceFromSupabase(true)">🔄 새로고침</button>
             <a class="sync-btn" href="https://supabase.com/dashboard/project/patxdjdibfqyucclhrde" target="_blank" rel="noopener" style="text-decoration:none;">🗄️ Supabase 바로가기</a>
+            <button class="sync-btn" id="deleteAllBtn" style="background:#ff6b6b; color:white;" onclick="deleteAllAttendance()">🗑️ 전체 출석 기록 삭제</button>
             <span id="realtimeStatus" style="color: white; font-size: 13px; align-self: center;">● 실시간 연결 중...</span>
             <button class="logout-btn" onclick="logout()">로그아웃</button>
         </div>
@@ -554,6 +555,54 @@
                         : '');
                 showStatus(`❌ Supabase 조회 오류: ${detail}${hint}`, 'error');
                 console.error('Supabase 조회 오류 상세:', error);
+            }
+        }
+
+        // 전체 출석 기록 삭제 (2단계 확인: 확인창 → "삭제" 직접 입력)
+        async function deleteAllAttendance() {
+            const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+            const count = attendanceRecords.length;
+
+            if (count === 0) {
+                alert('삭제할 출석 기록이 없습니다.');
+                return;
+            }
+
+            // 1단계: 몇 건이 지워지는지 명확히 보여주고 확인
+            const firstConfirm = confirm(
+                `⚠️ 전체 출석 기록 ${count}건을 정말 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다. 학생 명단(학번/이름)은 삭제되지 않고, 출석 기록만 전부 삭제됩니다.`
+            );
+            if (!firstConfirm) return;
+
+            // 2단계: "삭제"를 직접 입력해야 진행 (실수 클릭 방지)
+            const typed = prompt(
+                `정말로 진행하려면 아래 칸에 정확히 "삭제"라고 입력해주세요.\n(${count}건의 출석 기록이 영구적으로 삭제됩니다)`
+            );
+            if (typed !== '삭제') {
+                alert('입력이 일치하지 않아 취소되었습니다. 출석 기록은 삭제되지 않았습니다.');
+                return;
+            }
+
+            const deleteBtn = document.getElementById('deleteAllBtn');
+            deleteBtn.disabled = true;
+            deleteBtn.textContent = '⏳ 삭제 중...';
+
+            try {
+                const { error } = await supabaseClient
+                    .from('attendance')
+                    .delete()
+                    .gt('id', 0); // id는 항상 0보다 크므로 사실상 전체 삭제
+
+                if (error) throw error;
+
+                showStatus(`✅ 출석 기록 ${count}건이 전부 삭제되었습니다!`, 'success');
+                await fetchAttendanceFromSupabase();
+            } catch (error) {
+                showStatus(`❌ 삭제 오류: ${error.message}`, 'error');
+                console.error('전체 삭제 오류:', error);
+            } finally {
+                deleteBtn.disabled = false;
+                deleteBtn.textContent = '🗑️ 전체 출석 기록 삭제';
             }
         }
 
