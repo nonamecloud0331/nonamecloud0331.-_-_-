@@ -92,6 +92,36 @@
             cursor: not-allowed;
         }
 
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 15px;
+            font-family: inherit;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .char-count {
+            text-align: right;
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .form-group .optional-tag {
+            font-weight: 400;
+            color: #999;
+            font-size: 13px;
+        }
+
         .error-message {
             color: #d32f2f;
             font-size: 14px;
@@ -189,6 +219,12 @@
                 </select>
             </div>
 
+            <div class="form-group">
+                <label for="journalInput">오늘의 한 줄 일지 <span class="optional-tag">(선택, 간단히)</span></label>
+                <textarea id="journalInput" rows="3" maxlength="200" placeholder="오늘 하루를 짧게 적어주세요"></textarea>
+                <div class="char-count" id="charCount">0/200</div>
+            </div>
+
             <div class="error-message" id="errorMessage" role="alert"></div>
 
             <button type="submit" class="submit-btn" id="submitBtn" disabled>출석 확인</button>
@@ -282,6 +318,7 @@
             const student = JSON.parse(studentSelect.value);
             const idValue = student.id;
             const nameValue = student.name;
+            const journalValue = document.getElementById('journalInput').value.trim();
 
             submitBtn.disabled = true;
             submitBtn.textContent = '확인 중...';
@@ -299,7 +336,8 @@
                         student_id: idValue,
                         name: nameValue,
                         date: today,
-                        time: timeValue
+                        time: timeValue,
+                        journal: journalValue || null
                     });
 
                 if (error) {
@@ -330,6 +368,11 @@
 
         // 선택 변화 감지
         document.getElementById('studentSelect').addEventListener('change', validateForm);
+
+        // 일지 글자수 표시
+        document.getElementById('journalInput').addEventListener('input', function() {
+            document.getElementById('charCount').textContent = `${this.value.length}/200`;
+        });
     </script>
 </body>
 </html>
