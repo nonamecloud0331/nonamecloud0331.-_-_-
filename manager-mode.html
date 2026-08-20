@@ -326,6 +326,70 @@
             border-color: #f5576c;
         }
 
+        .page-toggle {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0 15px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .page-toggle-btn {
+            padding: 12px 22px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .page-toggle-btn:hover {
+            border-color: #667eea;
+        }
+
+        .page-toggle-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .journal-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .journal-entry {
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
+            border-radius: 8px;
+            padding: 14px 16px;
+        }
+
+        .journal-entry-date {
+            font-weight: bold;
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+
+        .journal-entry-text {
+            color: #555;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .journal-entry-text.empty {
+            color: #aaa;
+            font-style: italic;
+        }
+
         .full-width {
             grid-column: 1 / -1;
         }
@@ -440,11 +504,12 @@
                             <th>시간</th>
                             <th>학번</th>
                             <th>이름</th>
+                            <th>일지</th>
                         </tr>
                     </thead>
                     <tbody id="attendanceTableBody">
                         <tr>
-                            <td colspan="4" class="no-data">출석 기록이 없습니다</td>
+                            <td colspan="5" class="no-data">출석 기록이 없습니다</td>
                         </tr>
                     </tbody>
                 </table>
@@ -458,7 +523,7 @@
             <button class="btn-add" onclick="addStudent()">+ 학생 추가</button>
         </div>
 
-        <!-- 개인별 출석 그래프 -->
+        <!-- 개인별 출석 그래프 + 일지 -->
         <div class="section full-width">
             <div class="section-title">📈 학생별 출석 현황</div>
 
@@ -466,15 +531,26 @@
 
             <div class="buttons-grid" id="studentButtons"></div>
 
-            <div id="statsCards" class="stats-cards"></div>
-
-            <div class="view-toggle">
-                <button class="view-toggle-btn active" id="viewMonthlyBtn" onclick="setViewMode('monthly')">월별 보기</button>
-                <button class="view-toggle-btn" id="viewWeeklyBtn" onclick="setViewMode('weekly')">주별 보기 (최근 12주)</button>
+            <div class="page-toggle">
+                <button class="page-toggle-btn active" id="pageGraphBtn" onclick="setPageMode('graph')">📈 그래프</button>
+                <button class="page-toggle-btn" id="pageJournalBtn" onclick="setPageMode('journal')">📔 하루 일지</button>
             </div>
 
-            <div class="chart-container">
-                <canvas id="attendanceChart"></canvas>
+            <div id="graphPage">
+                <div id="statsCards" class="stats-cards"></div>
+
+                <div class="view-toggle">
+                    <button class="view-toggle-btn active" id="viewMonthlyBtn" onclick="setViewMode('monthly')">월별 보기</button>
+                    <button class="view-toggle-btn" id="viewWeeklyBtn" onclick="setViewMode('weekly')">주별 보기 (최근 12주)</button>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="attendanceChart"></canvas>
+                </div>
+            </div>
+
+            <div id="journalPage" style="display:none;">
+                <div id="journalList" class="journal-list"></div>
             </div>
         </div>
     </div>
@@ -492,6 +568,7 @@
 
         let currentStudent = null; // { id, name }
         let viewMode = 'monthly'; // 'monthly' | 'weekly'
+        let pageMode = 'graph'; // 'graph' | 'journal'
 
         // 페이지 로드 시 초기화
         window.addEventListener('load', async function() {
@@ -536,12 +613,16 @@
                     time: row.time,
                     id: row.student_id,
                     name: row.name,
+                    journal: row.journal || '',
                     timestamp: new Date(row.created_at).getTime()
                 }));
 
                 localStorage.setItem('attendanceRecords', JSON.stringify(records));
                 loadAttendanceRecords();
                 loadStudentButtons();
+                if (pageMode === 'journal' && currentStudent) {
+                    renderJournalPage(currentStudent.id);
+                }
 
                 if (showToast) {
                     showStatus('✅ Supabase에서 최신 데이터를 불러왔습니다!', 'success');
@@ -654,7 +735,7 @@
             const tableBody = document.getElementById('attendanceTableBody');
 
             if (attendanceRecords.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="4" class="no-data">출석 기록이 없습니다</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="5" class="no-data">출석 기록이 없습니다</td></tr>';
                 return;
             }
 
@@ -664,6 +745,7 @@
                     <td>${record.time}</td>
                     <td>${record.id}</td>
                     <td>${record.name}</td>
+                    <td>${record.journal ? escapeHtml(record.journal) : '<span style="color:#bbb;">-</span>'}</td>
                 </tr>
             `).join('');
         }
@@ -816,6 +898,51 @@
             }
         }
 
+        // 페이지 모드(그래프/일지) 전환
+        function setPageMode(mode) {
+            pageMode = mode;
+            document.getElementById('pageGraphBtn').classList.toggle('active', mode === 'graph');
+            document.getElementById('pageJournalBtn').classList.toggle('active', mode === 'journal');
+            document.getElementById('graphPage').style.display = mode === 'graph' ? '' : 'none';
+            document.getElementById('journalPage').style.display = mode === 'journal' ? '' : 'none';
+
+            if (!currentStudent) return;
+            if (mode === 'graph') {
+                renderChart();
+            } else {
+                renderJournalPage(currentStudent.id);
+            }
+        }
+
+        // 하루 일지 목록 렌더링 (해당 학생의 출석 기록을 최신순으로, 일지 내용과 함께)
+        function renderJournalPage(studentId) {
+            const attendanceRecords = JSON.parse(localStorage.getItem('attendanceRecords') || '[]');
+            const studentRecords = attendanceRecords
+                .filter(r => r.id === studentId)
+                .sort((a, b) => b.date.localeCompare(a.date));
+
+            const journalList = document.getElementById('journalList');
+
+            if (studentRecords.length === 0) {
+                journalList.innerHTML = '<p style="color: #999; text-align:center; padding: 30px 0;">출석 기록이 없습니다.</p>';
+                return;
+            }
+
+            journalList.innerHTML = studentRecords.map(r => `
+                <div class="journal-entry">
+                    <div class="journal-entry-date">📅 ${r.date}</div>
+                    <div class="journal-entry-text ${r.journal ? '' : 'empty'}">${r.journal ? escapeHtml(r.journal) : '(작성한 일지가 없습니다)'}</div>
+                </div>
+            `).join('');
+        }
+
+        // 간단한 HTML 이스케이프 (일지 내용에 <, > 등이 들어가도 안전하게)
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
         // 학생 선택
         function selectStudent(studentId) {
             const student = studentData.find(s => s.id === studentId);
@@ -826,7 +953,11 @@
                 btn.classList.toggle('active', btn.getAttribute('data-id') === studentId);
             });
 
-            renderChart();
+            if (pageMode === 'journal') {
+                renderJournalPage(studentId);
+            } else {
+                renderChart();
+            }
         }
 
         // 차트 플레이스홀더
@@ -834,6 +965,7 @@
             const chartContainer = document.querySelector('.chart-container');
             chartContainer.innerHTML = '<div class="chart-placeholder">출석 기록이 없습니다. 학생들의 출석을 기록해주세요.</div>';
             document.getElementById('statsCards').innerHTML = '';
+            document.getElementById('journalList').innerHTML = '';
             if (chart) {
                 chart.destroy();
                 chart = null;
